@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" role="img" aria-label="Severance lens">
+  <rect width="320" height="200" fill="#0b0d10"/>
+  <rect x="34" y="26" width="252" height="148" fill="#f1efe3"/>
+  <rect x="52" y="44" width="216" height="112" fill="#15171a"/>
+  <path d="M160 44v112" stroke="#f1efe3" stroke-width="6"/>
+  <circle cx="104" cy="100" r="30" fill="#8b1e2d"/>
+  <circle cx="216" cy="100" r="30" fill="#d9d5c6"/>
+  <path d="M88 100h32M200 100h32" stroke="#15171a" stroke-width="6"/>
+</svg>

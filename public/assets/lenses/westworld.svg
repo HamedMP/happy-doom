@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" role="img" aria-label="Westworld lens">
+  <rect width="320" height="200" fill="#0d0a07"/>
+  <circle cx="160" cy="100" r="70" fill="none" stroke="#c49a5a" stroke-width="6"/>
+  <circle cx="160" cy="100" r="42" fill="none" stroke="#6f8ca8" stroke-width="4"/>
+  <path d="M160 30v140M90 100h140" stroke="#ead9bd" stroke-width="3"/>
+  <path d="M118 142c28-34 56-34 84 0" fill="none" stroke="#c49a5a" stroke-width="6"/>
+</svg>

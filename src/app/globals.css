@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --background: #07080a;
+  --foreground: #f7f7f2;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Geist", "Geist Fallback", Arial, Helvetica, sans-serif;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+.theme-severance {
+  background:
+    linear-gradient(120deg, rgba(137, 24, 38, 0.22), transparent 34%),
+    linear-gradient(220deg, rgba(242, 242, 231, 0.09), transparent 42%),
+    #07080a;
+}
+
+.theme-matrix {
+  background:
+    linear-gradient(135deg, rgba(0, 180, 120, 0.22), transparent 36%),
+    linear-gradient(230deg, rgba(31, 76, 255, 0.14), transparent 40%),
+    #030906;
+}
+
+.theme-westworld {
+  background:
+    linear-gradient(135deg, rgba(190, 145, 75, 0.22), transparent 34%),
+    linear-gradient(250deg, rgba(80, 116, 160, 0.14), transparent 42%),
+    #090807;
+}

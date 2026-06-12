@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" role="img" aria-label="Matrix lens">
+  <rect width="320" height="200" fill="#020806"/>
+  <g fill="#2aff9b" font-family="monospace" font-size="18">
+    <text x="32" y="36">0101 1100 01</text>
+    <text x="48" y="72">11 001 10110</text>
+    <text x="28" y="112">10110 010 11</text>
+    <text x="66" y="154">00 11101 010</text>
+  </g>
+  <rect x="108" y="42" width="104" height="116" fill="none" stroke="#e8fff4" stroke-width="5"/>
+  <path d="M130 104l21 21 43-55" fill="none" stroke="#2aff9b" stroke-width="8"/>
+</svg>
