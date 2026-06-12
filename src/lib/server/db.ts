@@ -6,6 +6,7 @@ import { getLens } from "@/lib/game/lenses";
 import { timeline } from "@/lib/game/timeline";
 import type {
   Character,
+  CharacterId,
   CharacterState,
   ChoiceHistoryItem,
   LensId,
@@ -114,9 +115,9 @@ function parseEvent(row: EventRow): StoredEvent {
   };
 }
 
-export function createLife(lens: LensId) {
+export function createLife(lens: LensId, characterId?: CharacterId) {
   const lifeId = crypto.randomUUID();
-  const character = rollCharacter();
+  const character = rollCharacter(characterId);
 
   getDb()
     .prepare(

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const lensIdSchema = z.enum(["severance", "matrix", "westworld"]);
+export const characterIdSchema = z.enum(["mara-chen", "lena-ortiz", "noah-park"]);
 
 export const characterStateSchema = z.object({
   career: z.number().min(0).max(100),
@@ -25,7 +26,8 @@ export const narratedEventSchema = z.object({
 });
 
 export const startLifeSchema = z.object({
-  lens: lensIdSchema
+  lens: lensIdSchema,
+  characterId: characterIdSchema.optional()
 });
 
 export const eventRequestSchema = z.object({

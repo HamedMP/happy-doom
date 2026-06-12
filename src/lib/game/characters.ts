@@ -1,29 +1,46 @@
-import type { Character, CharacterState } from "./types";
+import type { Character, CharacterId, CharacterState } from "./types";
 
-const names = ["Mara Chen", "Iris Vale", "Samir Cole", "June Hart", "Noah Park", "Lena Ortiz"];
-const cities = ["Oakland", "London", "Austin", "Toronto", "Berlin", "Singapore"];
-const jobs = [
-  "operations analyst",
-  "junior software engineer",
-  "school counselor",
-  "product marketer",
-  "hospital scheduler",
-  "freelance designer"
+export const characters: Character[] = [
+  {
+    id: "mara-chen",
+    name: "Mara Chen",
+    age: 26,
+    city: "London",
+    job: "junior software engineer",
+    avatar: "/assets/characters/mara-chen.png",
+    summary: "Keeps headphones close and feelings closer. Good with broken tools, worse with uncertainty."
+  },
+  {
+    id: "lena-ortiz",
+    name: "Lena Ortiz",
+    age: 29,
+    city: "Oakland",
+    job: "freelance documentarian",
+    avatar: "/assets/characters/lena-ortiz.png",
+    summary: "Photographs what people miss. Pays rent by noticing details the platforms flatten."
+  },
+  {
+    id: "noah-park",
+    name: "Noah Park",
+    age: 34,
+    city: "Toronto",
+    job: "operations analyst",
+    avatar: "/assets/characters/noah-park.png",
+    summary: "Carries the umbrella and the bad forecast. Reliable, tired, harder to optimize than he looks."
+  }
 ];
-const avatars = ["/assets/avatars/avatar-01.svg", "/assets/avatars/avatar-02.svg", "/assets/avatars/avatar-03.svg"];
 
 function pick<T>(items: T[]) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-export function rollCharacter(): Character {
-  return {
-    name: pick(names),
-    age: 23 + Math.floor(Math.random() * 27),
-    city: pick(cities),
-    job: pick(jobs),
-    avatar: pick(avatars)
-  };
+export function getCharacter(id: string) {
+  return characters.find((character) => character.id === id) ?? characters[0];
+}
+
+export function rollCharacter(characterId?: CharacterId): Character {
+  const character = characterId ? getCharacter(characterId) : pick(characters);
+  return { ...character };
 }
 
 export const initialState: CharacterState = {
