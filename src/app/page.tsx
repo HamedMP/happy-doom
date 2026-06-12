@@ -1,5 +1,5 @@
-import { HappyDoomGame } from "@/components/happy-doom-game";
+import { GameClient } from "@/components/game-client";
 
 export default function Home() {
-  return <HappyDoomGame />;
+  return <GameClient />;
 }

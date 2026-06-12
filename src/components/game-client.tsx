@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Monitor, RotateCcw, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { characters } from "@/lib/game/characters";
+import { demoStorylineScenarios, experienceScenarios } from "@/lib/game/experience-scenarios";
 import { lenses } from "@/lib/game/lenses";
 import { getSceneForBeatIndex, scenes, setupScene } from "@/lib/game/scenes";
 import { timeline } from "@/lib/game/timeline";
@@ -205,6 +206,7 @@ export function GameClient() {
       </header>
 
       {phase === "lens" ? (
+        <>
         <section className="relative z-10 mx-auto grid min-h-[calc(100svh-68px)] w-full max-w-7xl items-end gap-5 px-4 pb-5 pt-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:pb-8">
           <div className="max-w-2xl pb-[2vh]">
             <p className="font-mono text-xs uppercase tracking-[0.28em] text-cyan-100/62">
@@ -293,9 +295,87 @@ export function GameClient() {
             </div>
           </div>
         </section>
+
+        <section className="relative z-10 border-t border-white/5 bg-[#050607]/92 px-4 py-14 backdrop-blur-sm sm:px-6">
+          <div className="mx-auto w-full max-w-7xl">
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-cyan-100/62">Fixed history / 2025-2027</p>
+            <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-[#fff7dc] sm:text-4xl">
+              Seven beats. The world does not negotiate. You do.
+            </h2>
+            <p className="mt-4 max-w-2xl leading-7 text-[#d8c8a8]/80">
+              Every life crosses the same seven days the history books will flatten into a paragraph. What the
+              paragraph leaves out is you.
+            </p>
+
+            <div className="mt-9 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {experienceScenarios.map((scenario) => (
+                <article key={scenario.beatIndex} className="hd-scenario">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="hd-meta">Beat 0{scenario.beatIndex + 1} / {scenario.time}</span>
+                    <span className="hd-tag">{scenario.pressure}</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold leading-tight text-[#fff7dc]">{scenario.title}</h3>
+                    <p className="hd-meta mt-1.5 normal-case tracking-normal">{scenario.location}</p>
+                  </div>
+                  <p className="text-sm leading-6 text-[#d8c8a8]/80">{scenario.narration}</p>
+                  <ul className="mt-auto grid gap-1.5 border-t border-white/10 pt-3">
+                    {scenario.choices.map((choice) => (
+                      <li key={choice.label} className="flex items-baseline justify-between gap-3 font-mono text-[11px] text-[#b6c2a0]">
+                        <span className="text-[#f2e4c9]">{choice.label}</span>
+                        <span className="shrink-0 text-[#8da08b]">{choice.cost}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+
+            <p className="mt-14 font-mono text-xs uppercase tracking-[0.28em] text-cyan-100/62">Storyline dossiers</p>
+            <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-[#fff7dc] sm:text-4xl">
+              The dilemmas the narrator is allowed to hand you.
+            </h2>
+
+            <div className="mt-9 grid gap-4 md:grid-cols-2">
+              {demoStorylineScenarios.map((storyline) => (
+                <article key={storyline.id} className="hd-scenario">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="hd-meta">Beat 0{storyline.beatIndex + 1}</span>
+                    <span className="hd-tag">{storyline.endingPattern}</span>
+                  </div>
+                  <h3 className="text-lg font-semibold leading-tight text-[#fff7dc]">{storyline.title}</h3>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#b6c2a0]">{storyline.agiPrepSkill}</p>
+                  <p className="text-sm leading-6 text-[#d8c8a8]/80">{storyline.setup}</p>
+                  <p className="border-l-2 border-[#d6d59a] pl-3 text-sm italic leading-6 text-[#f2e4c9]">
+                    {storyline.hardChoice}
+                  </p>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-12 flex flex-col items-start gap-4 border border-white/10 bg-black/40 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+              <div>
+                <h3 className="text-2xl font-semibold text-[#fff7dc]">The timeline is already written.</h3>
+                <p className="mt-1 text-[#d8c8a8]/80">Your character is not. Begin in the rented room, 2025.</p>
+              </div>
+              <button
+                className="pixel-button"
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  void startLife();
+                }}
+                disabled={loading}
+              >
+                <Monitor size={17} aria-hidden="true" />
+                {loading ? "Rolling life" : "Start life"}
+              </button>
+            </div>
+          </div>
+        </section>
+        </>
       ) : (
         <section className="vn-layout relative z-10 mx-auto grid min-h-[calc(100svh-68px)] w-full max-w-[1500px] gap-3 px-3 pb-3 pt-2 sm:px-5 lg:grid-cols-[210px_minmax(0,1fr)_255px]">
-          <aside className="vn-side-panel order-2 lg:order-1">
+          <aside className="vn-side-panel order-3 lg:order-1">
             {life ? (
               <>
                 <div className="vn-panel-label">Subject</div>
@@ -391,7 +471,7 @@ export function GameClient() {
             </div>
           </section>
 
-          <aside className="vn-menu-panel order-3">
+          <aside className="vn-menu-panel order-2 lg:order-3">
             <div>
               <div className="vn-panel-label">Action</div>
               <div className="mt-3 grid gap-3">
@@ -427,7 +507,7 @@ export function GameClient() {
                   alt=""
                   width={42}
                   height={42}
-                  className="h-auto w-auto border border-[#31423a] bg-[#111815]"
+                  className="h-11 w-11 shrink-0 border border-[#31423a] bg-[#111815] object-contain"
                 />
                 <div className="min-w-0">
                   <h2 className="truncate text-base font-semibold text-[#e9f3d1]">{lens.name}</h2>
