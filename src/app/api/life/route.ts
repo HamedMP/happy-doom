@@ -10,10 +10,10 @@ export async function POST(request: Request) {
   const parsed = startLifeSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid lens." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid life setup." }, { status: 400 });
   }
 
-  const life = createLife(parsed.data.lens, parsed.data.character);
+  const life = createLife(parsed.data.lens, parsed.data.character, parsed.data.characterId);
 
   return NextResponse.json({ life });
 }

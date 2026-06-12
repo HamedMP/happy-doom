@@ -1,6 +1,8 @@
 export type LensId = "severance" | "matrix" | "westworld";
+export type CharacterId = "mara-chen" | "lena-ortiz" | "noah-park";
 
 export type Character = {
+  id?: CharacterId;
   name: string;
   age: number;
   city: string;
@@ -8,6 +10,7 @@ export type Character = {
   avatar: string;
   trait?: string;
   palette?: string;
+  summary?: string;
 };
 
 export type CharacterState = {
