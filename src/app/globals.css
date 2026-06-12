@@ -803,6 +803,44 @@ button:disabled {
   box-shadow: inset 0 0 0 1px rgba(233, 196, 106, 0.25);
 }
 
+.hd-profile {
+  min-height: 112px;
+  border: 1px solid rgba(143, 184, 174, 0.22);
+  background:
+    linear-gradient(145deg, rgba(143, 184, 174, 0.06), transparent 62%),
+    rgba(4, 9, 8, 0.68);
+  padding: 14px;
+  text-align: left;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.hd-profile:hover {
+  transform: translateY(-2px);
+  border-color: rgba(143, 184, 174, 0.52);
+}
+
+.hd-profile[data-selected="true"] {
+  border-color: rgba(233, 196, 106, 0.78);
+  background:
+    linear-gradient(145deg, rgba(233, 196, 106, 0.12), transparent 54%),
+    rgba(13, 25, 23, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(233, 196, 106, 0.22);
+}
+
+.hd-profile-signal {
+  max-width: 86px;
+  border: 1px solid rgba(233, 196, 106, 0.42);
+  padding: 3px 6px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.45;
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--hd-gold);
+}
+
 .hd-input {
   min-height: 46px;
   width: 100%;
@@ -919,6 +957,49 @@ button:disabled {
 .hd-action:not(:disabled):hover {
   border-color: rgba(233, 196, 106, 0.6);
   color: var(--hd-gold);
+}
+
+.hd-action[data-wide="true"] {
+  grid-template-columns: 18px minmax(0, 1fr);
+  min-height: 74px;
+  place-items: initial;
+  align-items: start;
+  gap: 10px;
+  padding: 12px;
+  text-align: left;
+  letter-spacing: 0.1em;
+}
+
+.hd-action[data-wide="true"] > span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.hd-action[data-wide="true"] small {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #8ea29d;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.hd-action-empty {
+  border: 1px dashed rgba(143, 184, 174, 0.22);
+  background: rgba(4, 9, 8, 0.48);
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #8ea29d;
 }
 
 .hd-scenario {

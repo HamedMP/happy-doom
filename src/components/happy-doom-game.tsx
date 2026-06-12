@@ -5,15 +5,21 @@ import {
   BadgeDollarSign,
   BriefcaseBusiness,
   ChevronRight,
+  Eye,
+  FileText,
+  Handshake,
   Heart,
+  Megaphone,
   Monitor,
+  PhoneCall,
   RotateCcw,
+  SearchCheck,
   Shield,
-  Sparkles
+  Sparkles,
+  Users
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { bitlifeActions } from "@/lib/game/bitlife-actions";
 import { lenses } from "@/lib/game/lenses";
 import {
   demoStorylineScenarios,
@@ -51,12 +57,61 @@ type ChatItem = {
 };
 
 const defaultPersona: Persona = {
-  name: "Mara Vale",
-  age: 25,
-  city: "New York",
-  job: "workflow analyst",
-  trait: "notices when the dashboard lies"
+  name: "Sam Rivera",
+  age: 34,
+  city: "San Francisco",
+  job: "senior platform engineer",
+  trait: "reports failures even when the dashboard says green"
 };
+
+const profilePresets: Array<{ id: string; title: string; persona: Persona; hook: string; signal: string }> = [
+  {
+    id: "sam",
+    title: "The engineer",
+    persona: defaultPersona,
+    hook: "You see the automation from inside the machine room.",
+    signal: "Best for demo stakes"
+  },
+  {
+    id: "priya",
+    title: "The evaluator",
+    persona: {
+      name: "Priya Shah",
+      age: 41,
+      city: "London",
+      job: "AI safety evaluator",
+      trait: "turns vague safety claims into tests"
+    },
+    hook: "Your job is to decide what counts as proof before proof gets automated.",
+    signal: "Risk literacy"
+  },
+  {
+    id: "lina",
+    title: "The scheduler",
+    persona: {
+      name: "Lina Ortiz",
+      age: 29,
+      city: "Oakland",
+      job: "hospital operations scheduler",
+      trait: "notices when optimization hides responsibility"
+    },
+    hook: "You watch ordinary systems quietly become life-or-death infrastructure.",
+    signal: "Public impact"
+  },
+  {
+    id: "maya",
+    title: "The comms lead",
+    persona: {
+      name: "Maya Chen",
+      age: 32,
+      city: "Berlin",
+      job: "frontier lab communications lead",
+      trait: "tries to tell the truth through synthetic channels"
+    },
+    hook: "You know what the company knows, but not what the public can hear.",
+    signal: "Trust collapse"
+  }
+];
 
 function sceneForBeat(beatIndex: number) {
   if (beatIndex <= 2) return "/assets/experience/office-terminal.png";
@@ -123,6 +178,25 @@ function Message({ item }: { item: ChatItem }) {
   );
 }
 
+function profileMatches(left: Persona, right: Persona) {
+  return left.name === right.name && left.job === right.job && left.city === right.city;
+}
+
+function iconForChoice(label: string, detail: string): LucideIcon {
+  const text = `${label} ${detail}`.toLowerCase();
+
+  if (/verify|audit|proof|test|document|record|postmortem|source|log/.test(text)) return SearchCheck;
+  if (/tell|warn|publish|share|announce|message|public|press/.test(text)) return Megaphone;
+  if (/call|friend|family|partner|parent|team|neighbor|relationship/.test(text)) return PhoneCall;
+  if (/work|ship|manager|dashboard|deploy|company|job|career|meeting/.test(text)) return BriefcaseBusiness;
+  if (/refuse|resist|block|challenge|demand|protect|risk/.test(text)) return Shield;
+  if (/money|pay|buy|market|rent|cash|bonus|salary/.test(text)) return BadgeDollarSign;
+  if (/join|coordinate|collective|community|mutual|together/.test(text)) return Handshake;
+  if (/watch|wait|observe|listen|notice/.test(text)) return Eye;
+  if (/relationship|people|colleague|customer|patient|user/.test(text)) return Users;
+  return FileText;
+}
+
 export function HappyDoomGame() {
   const [phase, setPhase] = useState<Phase>("landing");
   const [lensId, setLensId] = useState<LensId>("severance");
@@ -140,6 +214,13 @@ export function HappyDoomGame() {
   const year = event ? 2025 + Math.min(2, Math.floor(event.beatIndex / 2.5)) : 2025;
   const progress = life ? Math.min(100, Math.round((life.beatIndex / 7) * 100)) : 0;
   const scene = sceneForBeat(event?.beatIndex ?? life?.beatIndex ?? 0);
+  const situationActions = useMemo(() => {
+    if (!event || event.kind !== "event") return [];
+    return event.choices.map((choice) => ({
+      choice,
+      Icon: iconForChoice(choice.label, choice.detail)
+    }));
+  }, [event]);
 
   const aiLabel = useMemo(() => {
     if (!config) return "waiting";
@@ -231,12 +312,6 @@ export function HappyDoomGame() {
   function chooseCurrent(choiceId: string, label: string) {
     if (!life || loading) return;
     void requestEvent(life.lifeId, choiceId, label);
-  }
-
-  function chooseActionShortcut(actionLabel: string, actionIndex: number) {
-    if (!life || !event || event.kind !== "event" || loading) return;
-    const choice = event.choices[actionIndex % event.choices.length];
-    chooseCurrent(choice.id, `${actionLabel}: ${choice.label}`);
   }
 
   if (phase === "landing") {
@@ -394,6 +469,25 @@ export function HappyDoomGame() {
               <div className="hd-badge">{aiLabel}</div>
             </div>
 
+            <div className="mt-6 grid gap-2 sm:grid-cols-2">
+              {profilePresets.map((profile) => (
+                <button
+                  key={profile.id}
+                  className="hd-profile"
+                  data-selected={profileMatches(persona, profile.persona)}
+                  onClick={() => setPersona(profile.persona)}
+                >
+                  <span className="flex items-start justify-between gap-3">
+                    <span>
+                      <span className="block text-sm font-extrabold text-[#f5edd3]">{profile.title}</span>
+                      <span className="mt-1 block text-xs leading-5 text-[#c4b899]">{profile.hook}</span>
+                    </span>
+                    <span className="hd-profile-signal">{profile.signal}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+
             <div className="mt-7 grid gap-4 sm:grid-cols-2">
               {(["name", "city", "job"] as const).map((field) => (
                 <label key={field} className="grid gap-1.5">
@@ -488,22 +582,30 @@ export function HappyDoomGame() {
               </div>
             ) : null}
 
-            <div className="mt-1 grid grid-cols-2 gap-2">
-              {bitlifeActions.map((action, index) => {
-                const Icon = action.icon;
-                return (
+            <div className="mt-1 grid gap-2">
+              <p className="hd-meta">Situation actions</p>
+              {situationActions.length > 0 ? (
+                situationActions.map(({ choice, Icon }) => (
                   <button
-                    key={action.id}
-                    title={action.description}
+                    key={choice.id}
+                    title={choice.detail}
                     className="hd-action"
-                    disabled={loading || !life || !event || event.kind !== "event"}
-                    onClick={() => chooseActionShortcut(action.label, index)}
+                    data-wide="true"
+                    disabled={loading || !life}
+                    onClick={() => chooseCurrent(choice.id, choice.label)}
                   >
                     <Icon size={16} />
-                    <span>{action.label}</span>
+                    <span>
+                      <span>{choice.label}</span>
+                      <small>{choice.detail}</small>
+                    </span>
                   </button>
-                );
-              })}
+                ))
+              ) : (
+                <div className="hd-action-empty">
+                  {loading ? "Waiting for narrator" : "Actions appear after the next scene"}
+                </div>
+              )}
             </div>
           </aside>
 
