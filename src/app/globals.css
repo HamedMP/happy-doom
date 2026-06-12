@@ -1609,3 +1609,44 @@ button:focus-visible {
     padding: 0.85rem;
   }
 }
+
+/* Mobile readability + character sprite */
+
+.hd-sprite {
+  image-rendering: pixelated;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.65));
+}
+
+.hd-scene-strip {
+  position: relative;
+  flex-shrink: 0;
+  height: 158px;
+  overflow: hidden;
+  border: 1px solid var(--hd-teal-dim);
+  background: #050607;
+}
+
+.hd-scene-strip-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(4, 5, 7, 0.45), transparent 36%, rgba(4, 5, 7, 0.78)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 4px);
+}
+
+@media (max-width: 1023px) {
+  .hd-msg {
+    max-width: 95%;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  .hd-msg.system {
+    font-size: 12px;
+  }
+
+  .hd-choice,
+  .hd-action[data-wide="true"] {
+    min-height: 56px;
+  }
+}

@@ -80,7 +80,7 @@ async function readEventStream(response: Response, onNarration: (delta: string) 
 
 export function GameClient() {
   const [selectedLens, setSelectedLens] = useState<LensId>("severance");
-  const [selectedCharacterId, setSelectedCharacterId] = useState<CharacterId>(characters[0].id);
+  const [selectedCharacterId, setSelectedCharacterId] = useState<CharacterId>(characters[0].id ?? "mara-chen");
   const [phase, setPhase] = useState<Phase>("lens");
   const [life, setLife] = useState<LifeSummary | null>(null);
   const [event, setEvent] = useState<StoredEvent | null>(null);
@@ -253,7 +253,7 @@ export function GameClient() {
               {characters.map((character) => (
                 <button
                   key={character.id}
-                  onClick={() => setSelectedCharacterId(character.id)}
+                  onClick={() => setSelectedCharacterId(character.id ?? "mara-chen")}
                   className={`character-option ${selectedCharacterId === character.id ? "character-option-active" : ""}`}
                   title={character.name}
                 >
