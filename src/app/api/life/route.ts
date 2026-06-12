@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid lens." }, { status: 400 });
   }
 
-  const life = createLife(parsed.data.lens);
+  const life = createLife(parsed.data.lens, parsed.data.character);
 
   return NextResponse.json({ life });
 }

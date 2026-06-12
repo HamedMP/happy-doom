@@ -13,19 +13,30 @@ export const choiceSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1).max(80),
   detail: z.string().min(1).max(180),
-  stateDelta: characterStateSchema.partial()
+  stateDelta: characterStateSchema
 });
 
 export const narratedEventSchema = z.object({
   title: z.string().min(1).max(90),
   narration: z.string().min(120).max(1400),
   choices: z.array(choiceSchema).min(2).max(3),
-  stateChanges: characterStateSchema.partial(),
+  stateChanges: characterStateSchema,
   callbackHint: z.string().min(1).max(160)
 });
 
+export const characterSetupSchema = z.object({
+  name: z.string().min(1).max(64),
+  age: z.number().min(18).max(90),
+  city: z.string().min(1).max(64),
+  job: z.string().min(1).max(80),
+  trait: z.string().min(1).max(140).optional(),
+  palette: z.string().min(1).max(32).optional(),
+  avatar: z.string().min(1).max(200).optional()
+});
+
 export const startLifeSchema = z.object({
-  lens: lensIdSchema
+  lens: lensIdSchema,
+  character: characterSetupSchema.optional()
 });
 
 export const eventRequestSchema = z.object({

@@ -114,9 +114,13 @@ function parseEvent(row: EventRow): StoredEvent {
   };
 }
 
-export function createLife(lens: LensId) {
+export function createLife(lens: LensId, characterOverride?: Partial<Character>) {
   const lifeId = crypto.randomUUID();
-  const character = rollCharacter();
+  const character = {
+    ...rollCharacter(),
+    ...characterOverride,
+    avatar: characterOverride?.avatar ?? "/assets/avatars/avatar-01.svg"
+  };
 
   getDb()
     .prepare(

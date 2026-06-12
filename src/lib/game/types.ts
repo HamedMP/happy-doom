@@ -6,6 +6,8 @@ export type Character = {
   city: string;
   job: string;
   avatar: string;
+  trait?: string;
+  palette?: string;
 };
 
 export type CharacterState = {

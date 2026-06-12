@@ -1,6 +1,7 @@
 import { Output, ToolLoopAgent } from "ai";
 import { getLens } from "@/lib/game/lenses";
 import { narratedEventSchema } from "@/lib/game/schemas";
+import { demoStorylineScenarios, experienceScenarios } from "@/lib/game/experience-scenarios";
 import { timeline } from "@/lib/game/timeline";
 import type {
   Character,
@@ -29,6 +30,7 @@ function promptFor(input: NarratorInput) {
   const lens = getLens(input.lensId);
   const beat = timeline[Math.min(input.beatIndex, timeline.length - 1)];
   const mode = input.epilogue ? "EPILOGUE" : "EVENT";
+  const demoScenario = demoStorylineScenarios.find((scenario) => scenario.beatIndex === input.beatIndex);
 
   return `
 Mode: ${mode}
@@ -53,13 +55,19 @@ ${JSON.stringify(input.history, null, 2)}
 Feedback hints:
 ${JSON.stringify(input.feedbackHints, null, 2)}
 
+Demo storyline seed for this beat:
+${demoScenario ? JSON.stringify(demoScenario, null, 2) : "No dedicated demo seed. Use the fixed world beat and character history."}
+
 Rules:
 - Do not let the player change the fixed world timeline.
 - Generate one intimate personal beat for this ordinary life.
+- For the Severance lens, center the story on split identity, employer surveillance, work-self vs home-self, and corporate language that slowly becomes threatening.
+- If a demo storyline seed exists, adapt it to the character and use its hard choice as the event's moral center.
 - Keep the prose specific, playable, and emotionally restrained.
 - Choices must be materially different, 2 or 3 total.
-- Each choice must include a small stateDelta with career, relationships, money, and/or beliefs.
-- For an epilogue, set choices to two replay-reflection options with no meaningful state changes.
+- Each choice must include stateDelta with all four numeric keys: career, relationships, money, beliefs. Use 0 for unchanged values.
+- stateChanges must include all four numeric keys: career, relationships, money, beliefs. Use 0 for unchanged values.
+- For an epilogue, set choices to two replay-reflection options with all state deltas set to 0.
 `;
 }
 
@@ -70,19 +78,19 @@ function localChoices(seed: number): Choice[] {
         id: "protect-work",
         label: "Protect the job",
         detail: "Accept the new workflow and keep your head down.",
-        stateDelta: { career: 8, beliefs: -4, relationships: -3 }
+        stateDelta: { career: 8, relationships: -3, money: 0, beliefs: -4 }
       },
       {
         id: "protect-people",
         label: "Protect your people",
         detail: "Spend the evening with someone who still knows your real voice.",
-        stateDelta: { relationships: 8, money: -3, career: -2 }
+        stateDelta: { career: -2, relationships: 8, money: -3, beliefs: 0 }
       },
       {
         id: "protect-truth",
         label: "Protect the truth",
         detail: "Document what feels wrong, even if no one asked.",
-        stateDelta: { beliefs: 8, career: -4, money: -2 }
+        stateDelta: { career: -4, relationships: 0, money: -2, beliefs: 8 }
       }
     ],
     [
@@ -90,13 +98,13 @@ function localChoices(seed: number): Choice[] {
         id: "optimize",
         label: "Optimize",
         detail: "Let the system make the practical choice.",
-        stateDelta: { career: 5, money: 5, beliefs: -5 }
+        stateDelta: { career: 5, relationships: 0, money: 5, beliefs: -5 }
       },
       {
         id: "refuse",
         label: "Refuse",
         detail: "Keep one part of the day unscored.",
-        stateDelta: { beliefs: 7, relationships: 3, career: -4 }
+        stateDelta: { career: -4, relationships: 3, money: 0, beliefs: 7 }
       }
     ]
   ];
@@ -119,16 +127,16 @@ export function localNarrator(input: NarratorInput): NarratedEvent {
           id: "replay-same",
           label: "Remember this life",
           detail: "Keep the shape of these choices for a moment.",
-          stateDelta: {}
+          stateDelta: { career: 0, relationships: 0, money: 0, beliefs: 0 }
         },
         {
           id: "replay-new",
           label: "Begin another",
           detail: "Roll a new ordinary life against the same history.",
-          stateDelta: {}
+          stateDelta: { career: 0, relationships: 0, money: 0, beliefs: 0 }
         }
       ],
-      stateChanges: {},
+      stateChanges: { career: 0, relationships: 0, money: 0, beliefs: 0 },
       callbackHint: "The player reached the end and cared about the accumulated life summary."
     };
   }
@@ -138,13 +146,57 @@ export function localNarrator(input: NarratorInput): NarratedEvent {
       ? "At work, the dashboard knows what you did before you do."
       : lens.id === "matrix"
         ? "A message arrives in a voice you trust, but its timing is too perfect."
-        : "The morning repeats with one detail changed, like the script forgot its own line.";
+      : "The morning repeats with one detail changed, like the script forgot its own line.";
+
+  if (lens.id === "severance") {
+    const demoScenario = demoStorylineScenarios.find((item) => item.beatIndex === input.beatIndex);
+    if (demoScenario) {
+      return {
+        title: demoScenario.title,
+        narration: `${input.character.name}'s work-self opens the file before their home-self is ready. ${demoScenario.setup} ${demoScenario.hardChoice}`,
+        choices: demoScenario.choices.slice(0, 3).map((choice, index) => ({
+          id: `${demoScenario.beatIndex}-${index}-${choice.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+          label: choice.label,
+          detail: choice.outcome.slice(0, 176),
+          stateDelta:
+            index === 0
+              ? { career: 5, relationships: -2, money: 2, beliefs: -4 }
+              : index === 1
+                ? { career: -3, relationships: 2, money: -1, beliefs: 7 }
+                : { career: -5, relationships: 0, money: -2, beliefs: 8 }
+        })),
+        stateChanges: { career: 0, relationships: 0, money: 0, beliefs: 0 },
+        callbackHint: `${demoScenario.endingPattern}: ${demoScenario.agiPrepSkill}`
+      };
+    }
+
+    const scenario = experienceScenarios.find((item) => item.beatIndex === input.beatIndex);
+    if (scenario) {
+      return {
+        title: scenario.title,
+        narration: `${input.character.name}'s work badge unlocks before their hand reaches the reader. ${scenario.narration} The company calls it continuity. At home, it feels like someone else is learning how to be you.`,
+        choices: scenario.choices.map((choice, index) => ({
+          id: `${scenario.beatIndex}-${index}-${choice.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+          label: choice.label,
+          detail: `${choice.cost}; ${choice.effect}.`,
+          stateDelta:
+            index === 0
+              ? { career: -3, relationships: 5, money: 0, beliefs: 5 }
+              : index === 1
+                ? { career: 6, relationships: 0, money: 4, beliefs: -5 }
+                : { career: -4, relationships: 0, money: -3, beliefs: 7 }
+        })),
+        stateChanges: { career: 0, relationships: 0, money: 0, beliefs: 0 },
+        callbackHint: `The player faced ${scenario.pressure} through the Severance lens.`
+      };
+    }
+  }
 
   return {
     title: `${beat.year}: ${beat.title}`,
     narration: `${focus} ${input.character.name}, a ${input.character.age}-year-old ${input.character.job} in ${input.character.city}, tries to keep an ordinary day intact while the world moves through ${beat.title.toLowerCase()}. ${beat.pressure} ${callback} Nothing asks you to save history. It only asks what you will trade before dinner.`,
     choices: localChoices(input.beatIndex),
-    stateChanges: {},
+    stateChanges: { career: 0, relationships: 0, money: 0, beliefs: 0 },
     callbackHint: `The player responded to ${beat.title} through a ${lens.name} lens.`
   };
 }
@@ -181,19 +233,29 @@ export async function streamNarratedEvent(
     return { event, usedAi: false };
   }
 
-  const agent = createNarratorAgent(input.lensId);
-  const stream = await agent.stream({
-    prompt: promptFor(input)
-  });
+  try {
+    const agent = createNarratorAgent(input.lensId);
+    const stream = await agent.stream({
+      prompt: promptFor(input)
+    });
 
-  let seenNarration = "";
-  for await (const partial of stream.partialOutputStream) {
-    const nextNarration = partial?.narration;
-    if (typeof nextNarration === "string" && nextNarration.length > seenNarration.length) {
-      handlers.onNarrationDelta(nextNarration.slice(seenNarration.length));
-      seenNarration = nextNarration;
+    let seenNarration = "";
+    for await (const partial of stream.partialOutputStream) {
+      const nextNarration = partial?.narration;
+      if (typeof nextNarration === "string" && nextNarration.length > seenNarration.length) {
+        handlers.onNarrationDelta(nextNarration.slice(seenNarration.length));
+        seenNarration = nextNarration;
+      }
     }
-  }
 
-  return { event: (await stream.output) as NarratedEvent, usedAi: true };
+    return { event: (await stream.output) as NarratedEvent, usedAi: true };
+  } catch (error) {
+    console.error(error);
+    const event = localNarrator(input);
+    for (const word of event.narration.split(/(\s+)/)) {
+      handlers.onNarrationDelta(word);
+      await new Promise((resolve) => setTimeout(resolve, 8));
+    }
+    return { event, usedAi: false };
+  }
 }

@@ -7,7 +7,8 @@ Before adding features, read:
 1. `game-design.md` for the core promise and emotional target.
 2. `timeline-spine.md` for the fixed world history that must not branch.
 3. `narrator-agent.md` for AI generation contracts and prompt rules.
-4. `asset-catalog.md` before adding or replacing local visual assets.
-5. `feature-backlog.md` for scoped follow-up work after the hackathon MVP.
+4. `scenarios-and-morale.md` for the educational goals, scenario seeds, and ending patterns.
+5. `asset-catalog.md` before adding or replacing local visual assets.
+6. `feature-backlog.md` for scoped follow-up work after the hackathon MVP.
 
 Keep docs close to implementation. When changing game rules, generated event shape, available assets, or timeline beats, update the relevant doc in the same commit.
