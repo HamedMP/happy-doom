@@ -21,6 +21,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { lenses } from "@/lib/game/lenses";
+import { getSceneForBeatIndex, setupScene } from "@/lib/game/scenes";
 import {
   demoStorylineScenarios,
   experienceScenarios
@@ -35,6 +36,7 @@ type Persona = {
   city: string;
   job: string;
   trait: string;
+  avatar: string;
 };
 
 type ConfigStatus = {
@@ -61,7 +63,8 @@ const defaultPersona: Persona = {
   age: 34,
   city: "San Francisco",
   job: "senior platform engineer",
-  trait: "reports failures even when the dashboard says green"
+  trait: "reports failures even when the dashboard says green",
+  avatar: "/assets/characters/noah-park.png"
 };
 
 const profilePresets: Array<{ id: string; title: string; persona: Persona; hook: string; signal: string }> = [
@@ -80,7 +83,8 @@ const profilePresets: Array<{ id: string; title: string; persona: Persona; hook:
       age: 41,
       city: "London",
       job: "AI safety evaluator",
-      trait: "turns vague safety claims into tests"
+      trait: "turns vague safety claims into tests",
+      avatar: "/assets/characters/mara-chen.png"
     },
     hook: "Your job is to decide what counts as proof before proof gets automated.",
     signal: "Risk literacy"
@@ -93,7 +97,8 @@ const profilePresets: Array<{ id: string; title: string; persona: Persona; hook:
       age: 29,
       city: "Oakland",
       job: "hospital operations scheduler",
-      trait: "notices when optimization hides responsibility"
+      trait: "notices when optimization hides responsibility",
+      avatar: "/assets/characters/lena-ortiz.png"
     },
     hook: "You watch ordinary systems quietly become life-or-death infrastructure.",
     signal: "Public impact"
@@ -106,19 +111,14 @@ const profilePresets: Array<{ id: string; title: string; persona: Persona; hook:
       age: 32,
       city: "Berlin",
       job: "frontier lab communications lead",
-      trait: "tries to tell the truth through synthetic channels"
+      trait: "tries to tell the truth through synthetic channels",
+      avatar: "/assets/characters/mara-chen.png"
     },
     hook: "You know what the company knows, but not what the public can hear.",
     signal: "Trust collapse"
   }
 ];
 
-function sceneForBeat(beatIndex: number) {
-  if (beatIndex <= 2) return "/assets/experience/office-terminal.png";
-  if (beatIndex === 3) return "/assets/experience/store-night.png";
-  if (beatIndex >= 5) return "/assets/experience/train-night.png";
-  return "/assets/experience/landing-room.png";
-}
 
 async function readEventStream(response: Response, onNarration: (delta: string) => void) {
   const reader = response.body?.getReader();
@@ -213,7 +213,7 @@ export function HappyDoomGame() {
   const lens = lenses.find((entry) => entry.id === lensId) ?? lenses[0];
   const year = event ? 2025 + Math.min(2, Math.floor(event.beatIndex / 2.5)) : 2025;
   const progress = life ? Math.min(100, Math.round((life.beatIndex / 7) * 100)) : 0;
-  const scene = sceneForBeat(event?.beatIndex ?? life?.beatIndex ?? 0);
+  const scene = getSceneForBeatIndex(event?.beatIndex ?? life?.beatIndex ?? 0);
   const situationActions = useMemo(() => {
     if (!event || event.kind !== "event") return [];
     return event.choices.map((choice) => ({
@@ -285,7 +285,6 @@ export function HappyDoomGame() {
           lens: lensId,
           character: {
             ...persona,
-            avatar: "/assets/avatars/avatar-01.svg",
             palette: "amber"
           }
         })
@@ -454,7 +453,7 @@ export function HappyDoomGame() {
   if (phase === "setup") {
     return (
       <main className="relative min-h-screen overflow-hidden text-[var(--hd-cream)]">
-        <Image src="/assets/experience/landing-room.png" alt="" fill priority className="hd-pixel object-cover" />
+        <Image src={setupScene.asset} alt="" fill priority className="hd-pixel object-cover" />
         <div className="hd-rain" />
 
         <div className="relative z-10 flex min-h-screen items-center justify-center p-4">
@@ -538,39 +537,56 @@ export function HappyDoomGame() {
 
   return (
     <main className="relative h-dvh overflow-hidden text-[var(--hd-cream)]">
-      <Image src={scene} alt="" fill priority className="hd-pixel object-cover" />
-      <div className="hd-shade" />
+      <Image src={scene.asset} alt="" fill priority className="hd-pixel hidden object-cover lg:block" />
+      <div className="hd-shade hidden lg:block" />
 
-      <div className="relative z-10 mx-auto flex h-dvh max-w-6xl flex-col gap-3 p-3 sm:p-4">
-        <header className="hd-panel flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <div>
+      <div className="relative z-10 mx-auto flex h-dvh max-w-6xl flex-col gap-2 p-2 sm:gap-3 sm:p-4">
+        <header className="hd-panel flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 sm:px-4 sm:py-3">
+          <div className="min-w-0">
             <p className="hd-kicker">{lens.name} lens / fixed history</p>
-            <h1 className="mt-0.5 text-xl font-extrabold tracking-tight text-[#f5edd3]">
+            <h1 className="mt-0.5 truncate text-base font-extrabold tracking-tight text-[#f5edd3] sm:text-xl">
               {event?.title ?? "Opening the file"}
             </h1>
           </div>
           <div className="flex items-center gap-3">
             <span className="hd-badge">{year}</span>
-            <div className="h-2 w-32 bg-white/10 sm:w-44">
+            <div className="h-2 w-20 bg-white/10 sm:w-44">
               <div className="h-full bg-[var(--hd-gold)] transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[290px_1fr]">
+        <div className="hd-scene-strip lg:hidden">
+          <Image src={scene.asset} alt={scene.name} fill className="hd-pixel object-cover" />
+          <div className="hd-scene-strip-shade" />
+          <Image
+            src={persona.avatar}
+            alt={persona.name}
+            width={84}
+            height={140}
+            className="hd-sprite absolute bottom-0 left-4 h-[126px] w-auto"
+          />
+          <div className="absolute bottom-2 right-2 flex flex-col items-end gap-1">
+            <span className="hd-tag">{persona.name}</span>
+            <span className="hd-meta">{scene.name}</span>
+          </div>
+        </div>
+
+        <div className="grid min-h-0 flex-1 gap-2 sm:gap-3 lg:grid-cols-[290px_1fr]">
           <aside className="hd-panel hidden content-start gap-3 p-4 lg:grid">
-            <div className="flex items-center gap-3">
+            <div className="relative h-44 overflow-hidden border border-[var(--hd-teal-dim)] bg-black/50">
+              <Image src={scene.asset} alt="" fill className="hd-pixel object-cover opacity-60" />
               <Image
-                src="/assets/avatars/avatar-01.svg"
-                alt=""
-                width={56}
-                height={56}
-                className="hd-pixel border border-[var(--hd-teal-dim)] bg-black/60"
+                src={persona.avatar}
+                alt={persona.name}
+                width={110}
+                height={176}
+                className="hd-sprite absolute bottom-0 left-1/2 h-[164px] w-auto -translate-x-1/2"
               />
-              <div className="min-w-0">
-                <h2 className="truncate text-lg font-bold text-[#f5edd3]">{persona.name}</h2>
-                <p className="hd-meta mt-0.5">Age {life?.character.age ?? persona.age} / {persona.city}</p>
-              </div>
+            </div>
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-bold text-[#f5edd3]">{persona.name}</h2>
+              <p className="hd-meta mt-0.5">Age {life?.character.age ?? persona.age} / {persona.city}</p>
             </div>
 
             {life ? (
@@ -624,7 +640,7 @@ export function HappyDoomGame() {
               </div>
             ) : null}
 
-            <div ref={feedRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+            <div ref={feedRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 sm:p-4">
               {chat.map((item) => (
                 <Message key={item.id} item={item} />
               ))}
@@ -641,18 +657,20 @@ export function HappyDoomGame() {
               ) : null}
             </div>
 
-            <div className="border-t border-white/10 p-3">
-              {event && event.kind === "event" && phase === "playing" ? (
-                <div className="grid gap-2">
-                  {event.choices.map((choice) => (
+            <div className="border-t border-white/10 p-2.5 sm:p-3">
+              {situationActions.length > 0 && phase === "playing" ? (
+                <div className="grid gap-2 lg:hidden">
+                  <p className="hd-meta">What do you do?</p>
+                  {situationActions.map(({ choice, Icon }) => (
                     <button
                       key={choice.id}
                       className="hd-choice"
                       disabled={loading || !life}
                       onClick={() => chooseCurrent(choice.id, choice.label)}
                     >
-                      <span className="flex items-center justify-between gap-3">
-                        <span>
+                      <span className="flex items-center gap-3">
+                        <Icon className="shrink-0 text-[var(--hd-gold)]" size={18} />
+                        <span className="min-w-0 flex-1">
                           <span className="block font-bold text-[#f5edd3]">{choice.label}</span>
                           <span className="mt-0.5 block text-xs leading-5 text-[#b3a888]">{choice.detail}</span>
                         </span>

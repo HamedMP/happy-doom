@@ -1,11 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { RotateCcw, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Monitor, RotateCcw, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useMemo, useState } from "react";
+import { characters } from "@/lib/game/characters";
+import { demoStorylineScenarios, experienceScenarios } from "@/lib/game/experience-scenarios";
 import { lenses } from "@/lib/game/lenses";
+import { getSceneForBeatIndex, scenes, setupScene } from "@/lib/game/scenes";
 import { timeline } from "@/lib/game/timeline";
-import type { LensId, LifeSummary, StoredEvent } from "@/lib/game/types";
+import type { CharacterId, LensId, LifeSummary, StoredEvent } from "@/lib/game/types";
 
 type Phase = "lens" | "playing" | "summary";
 
@@ -14,6 +17,12 @@ type EventPayload = {
   life: LifeSummary;
   usedAi: boolean;
   cached: boolean;
+};
+
+const lensPreviewCopy: Record<LensId, string> = {
+  severance: "Work-self versus home-self.",
+  matrix: "Trust under synthetic pressure.",
+  westworld: "Loops that start to remember."
 };
 
 function statLabel(value: number) {
@@ -72,6 +81,7 @@ async function readEventStream(response: Response, onNarration: (delta: string) 
 
 export function GameClient() {
   const [selectedLens, setSelectedLens] = useState<LensId>("severance");
+  const [selectedCharacterId, setSelectedCharacterId] = useState<CharacterId>(characters[0].id ?? "mara-chen");
   const [phase, setPhase] = useState<Phase>("lens");
   const [life, setLife] = useState<LifeSummary | null>(null);
   const [event, setEvent] = useState<StoredEvent | null>(null);
@@ -81,9 +91,20 @@ export function GameClient() {
   const [aiMode, setAiMode] = useState<"ai" | "local" | null>(null);
 
   const lens = useMemo(() => lenses.find((item) => item.id === selectedLens) ?? lenses[0], [selectedLens]);
-  const beat = life ? timeline[Math.min(life.beatIndex, timeline.length - 1)] : timeline[0];
-  const progress = life ? Math.min(100, Math.round((life.beatIndex / timeline.length) * 100)) : 0;
+  const selectedCharacter = useMemo(
+    () => characters.find((character) => character.id === selectedCharacterId) ?? characters[0],
+    [selectedCharacterId]
+  );
+  const visibleBeatIndex = life ? Math.min(life.beatIndex, timeline.length - 1) : 0;
+  const beat = timeline[visibleBeatIndex];
+  const progress = life ? Math.min(100, Math.round(((visibleBeatIndex + 1) / timeline.length) * 100)) : 0;
   const displayedNarration = loading && streamedNarration ? streamedNarration : event?.narration;
+  const narratorLabel = aiMode === "ai" ? "AI narrator" : aiMode === "local" ? "local narrator" : "waiting";
+  const activeScene = phase === "lens" ? setupScene : getSceneForBeatIndex(visibleBeatIndex);
+  const sceneBackdropStyle = {
+    backgroundImage: `linear-gradient(90deg, rgba(3, 4, 5, 0.22), rgba(3, 4, 5, 0.04) 42%, rgba(3, 4, 5, 0.48)), linear-gradient(0deg, rgba(3, 4, 5, 0.9), rgba(3, 4, 5, 0.14) 36%, rgba(3, 4, 5, 0.34)), url("${activeScene.asset}")`,
+    backgroundPosition: activeScene.position
+  };
 
   async function requestEvent(lifeId: string, selectedChoiceId?: string) {
     setLoading(true);
@@ -122,7 +143,7 @@ export function GameClient() {
       const response = await fetch("/api/life", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lens: selectedLens })
+        body: JSON.stringify({ lens: selectedLens, characterId: selectedCharacterId })
       });
       const payload = (await response.json()) as { life: LifeSummary };
       setLife(payload.life);
@@ -160,191 +181,375 @@ export function GameClient() {
   }
 
   return (
-    <main className={`min-h-screen ${lens.themeClass}`}>
-      <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 sm:px-6 lg:px-8">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 py-3">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-white/55">Happy Doom</p>
-            <h1 className="text-2xl font-semibold text-white sm:text-3xl">One Life Before the Singularity</h1>
-          </div>
-          <div className="flex items-center gap-2 rounded border border-white/10 bg-black/20 px-3 py-2 font-mono text-xs text-white/70">
-            <Sparkles size={14} />
-            {aiMode === "ai" ? "AI narrator" : aiMode === "local" ? "local narrator" : "ready"}
-          </div>
-        </header>
+    <main className={`game-shell min-h-screen overflow-hidden text-[#f6efe2] ${lens.themeClass}`}>
+      <div className="scene-backdrop" style={sceneBackdropStyle} aria-hidden="true" />
+      <div className="scene-vignette" aria-hidden="true" />
+      <div className="scene-rain" aria-hidden="true" />
+      <div className="scene-scanlines" aria-hidden="true" />
 
-        {phase === "lens" ? (
-          <div className="grid flex-1 content-center gap-6 py-8 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="flex flex-col justify-center gap-5">
-              <div>
-                <p className="font-mono text-sm text-white/50">2025-2027 fixed timeline</p>
-                <h2 className="mt-2 max-w-2xl text-4xl font-semibold leading-tight text-white sm:text-6xl">
-                  You cannot stop history. Choose how to live inside it.
-                </h2>
-              </div>
-              <p className="max-w-xl text-base leading-7 text-white/68">
-                Pick a tonal lens. The same world beats happen in the same order; the narrator changes the personal
-                story around your ordinary life.
-              </p>
-              <button
-                className="inline-flex h-11 w-fit items-center gap-2 rounded border border-white/15 bg-white px-4 text-sm font-medium text-black transition hover:bg-white/85 disabled:opacity-50"
-                onClick={startLife}
-                disabled={loading}
-              >
-                <Sparkles size={16} />
+      <header className="relative z-10 mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div className="min-w-0">
+          <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-cyan-100/62">Happy Doom</p>
+          <h1 className="max-w-[18rem] text-lg font-semibold tracking-normal text-[#fff9ea] sm:max-w-none sm:text-2xl">
+            One Life Before the Singularity
+          </h1>
+        </div>
+        <div className="hidden items-center gap-3 font-mono text-[0.68rem] uppercase tracking-[0.22em] text-[#e8d4a4]/70 sm:flex">
+          <span>2025-2027</span>
+          <span className="h-1 w-1 rounded-full bg-[#e8d4a4]/50" />
+          <span>fixed history</span>
+        </div>
+        <div className="hidden h-9 items-center gap-2 border border-cyan-100/16 bg-black/35 px-3 font-mono text-[0.68rem] uppercase tracking-[0.18em] text-cyan-100/78 min-[520px]:inline-flex">
+          <Sparkles size={14} aria-hidden="true" />
+          {narratorLabel}
+        </div>
+      </header>
+
+      {phase === "lens" ? (
+        <>
+        <section className="relative z-10 mx-auto grid min-h-[calc(100svh-68px)] w-full max-w-7xl items-end gap-5 px-4 pb-5 pt-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:pb-8">
+          <div className="max-w-2xl pb-[2vh]">
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-cyan-100/62">
+              2025 / rented room / rain outside
+            </p>
+            <h2 className="mt-4 max-w-[12ch] text-4xl font-semibold leading-[1] text-[#fff7dc] sm:max-w-3xl sm:text-5xl lg:text-6xl">
+              One ordinary life, while history locks the door.
+            </h2>
+            <p className="mt-4 max-w-[22rem] text-base leading-7 text-[#d8c8a8] sm:max-w-xl">
+              The city is awake. The machine on the desk is still warm. Choose the tone of the life you are about to
+              remember.
+            </p>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button className="pixel-button" onClick={startLife} disabled={loading}>
+                <Monitor size={17} aria-hidden="true" />
                 {loading ? "Rolling life" : "Start life"}
               </button>
               {error ? <p className="text-sm text-red-200">{error}</p> : null}
             </div>
+          </div>
 
-            <div className="grid gap-3">
-              {lenses.map((item) => (
+          <div className="glass-panel setup-panel p-3 sm:p-4">
+            <p className="font-mono text-[0.68rem] uppercase tracking-[0.26em] text-cyan-100/54">Choose character</p>
+            <div className="character-stage mt-3">
+              <div className="character-stage-art">
+                <Image
+                  src={selectedCharacter.avatar}
+                  alt=""
+                  width={220}
+                  height={275}
+                  priority
+                  className="h-full w-full object-contain object-bottom"
+                />
+              </div>
+              <div className="min-w-0 self-end">
+                <h3 className="text-xl font-semibold text-[#fff8e6]">{selectedCharacter.name}</h3>
+                <p className="mt-1 text-sm leading-5 text-[#d8c8a8]/78">
+                  {selectedCharacter.age}, {selectedCharacter.city}
+                </p>
+                <p className="text-sm leading-5 text-[#d8c8a8]/78">{selectedCharacter.job}</p>
+                <p className="mt-3 text-sm leading-6 text-[#f2e4c9]/76">{selectedCharacter.summary}</p>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {characters.map((character) => (
                 <button
-                  key={item.id}
-                  onClick={() => setSelectedLens(item.id)}
-                  className={`grid grid-cols-[88px_1fr] gap-4 rounded border p-3 text-left transition ${
-                    selectedLens === item.id
-                      ? "border-white/55 bg-white/14"
-                      : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
-                  }`}
+                  key={character.id}
+                  onClick={() => setSelectedCharacterId(character.id ?? "mara-chen")}
+                  className={`character-option ${selectedCharacterId === character.id ? "character-option-active" : ""}`}
+                  title={character.name}
                 >
-                  <Image src={item.asset} alt="" width={88} height={88} className="rounded border border-white/10" />
-                  <span className="flex flex-col justify-center">
-                    <span className="text-xl font-semibold text-white">{item.name}</span>
-                    <span className="mt-1 text-sm leading-6 text-white/65">{item.tagline}</span>
-                  </span>
+                  <Image
+                    src={character.avatar}
+                    alt=""
+                    width={86}
+                    height={108}
+                    className="h-20 w-full object-contain object-bottom"
+                  />
+                  <span>{character.name.split(" ")[0]}</span>
                 </button>
               ))}
             </div>
-          </div>
-        ) : (
-          <div className="grid flex-1 gap-4 py-4 lg:grid-cols-[280px_1fr_300px]">
-            <aside className="space-y-4">
-              {life ? (
-                <div className="rounded border border-white/10 bg-black/24 p-4">
-                  <Image src={life.character.avatar} alt="" width={88} height={88} className="mb-4 rounded" />
-                  <h2 className="text-xl font-semibold text-white">{life.character.name}</h2>
-                  <p className="mt-1 text-sm text-white/62">
-                    {life.character.age}, {life.character.city}
-                  </p>
-                  <p className="text-sm text-white/62">{life.character.job}</p>
-                </div>
-              ) : null}
 
-              {life ? (
-                <div className="rounded border border-white/10 bg-black/24 p-4">
-                  <p className="mb-3 font-mono text-xs uppercase tracking-[0.18em] text-white/45">state</p>
+            <div className="mt-4 border-t border-white/10 pt-4">
+              <p className="font-mono text-[0.68rem] uppercase tracking-[0.26em] text-cyan-100/54">Select lens</p>
+              <div className="mt-3 grid gap-2">
+                {lenses.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setSelectedLens(item.id)}
+                    className={`lens-option ${selectedLens === item.id ? "lens-option-active" : ""}`}
+                  >
+                    <span className="grid h-11 w-11 shrink-0 place-items-center border border-white/10 bg-black/35">
+                      <Image src={item.asset} alt="" width={34} height={34} className="h-auto w-auto" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-base font-semibold text-[#fff8e6]">{item.name}</span>
+                      <span className="mt-0.5 block text-sm leading-5 text-[#d8c8a8]/78">
+                        {lensPreviewCopy[item.id]}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="relative z-10 border-t border-white/5 bg-[#050607]/92 px-4 py-14 backdrop-blur-sm sm:px-6">
+          <div className="mx-auto w-full max-w-7xl">
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-cyan-100/62">Fixed history / 2025-2027</p>
+            <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-[#fff7dc] sm:text-4xl">
+              Seven beats. The world does not negotiate. You do.
+            </h2>
+            <p className="mt-4 max-w-2xl leading-7 text-[#d8c8a8]/80">
+              Every life crosses the same seven days the history books will flatten into a paragraph. What the
+              paragraph leaves out is you.
+            </p>
+
+            <div className="mt-9 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {experienceScenarios.map((scenario) => (
+                <article key={scenario.beatIndex} className="hd-scenario">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="hd-meta">Beat 0{scenario.beatIndex + 1} / {scenario.time}</span>
+                    <span className="hd-tag">{scenario.pressure}</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold leading-tight text-[#fff7dc]">{scenario.title}</h3>
+                    <p className="hd-meta mt-1.5 normal-case tracking-normal">{scenario.location}</p>
+                  </div>
+                  <p className="text-sm leading-6 text-[#d8c8a8]/80">{scenario.narration}</p>
+                  <ul className="mt-auto grid gap-1.5 border-t border-white/10 pt-3">
+                    {scenario.choices.map((choice) => (
+                      <li key={choice.label} className="flex items-baseline justify-between gap-3 font-mono text-[11px] text-[#b6c2a0]">
+                        <span className="text-[#f2e4c9]">{choice.label}</span>
+                        <span className="shrink-0 text-[#8da08b]">{choice.cost}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+
+            <p className="mt-14 font-mono text-xs uppercase tracking-[0.28em] text-cyan-100/62">Storyline dossiers</p>
+            <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-[#fff7dc] sm:text-4xl">
+              The dilemmas the narrator is allowed to hand you.
+            </h2>
+
+            <div className="mt-9 grid gap-4 md:grid-cols-2">
+              {demoStorylineScenarios.map((storyline) => (
+                <article key={storyline.id} className="hd-scenario">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="hd-meta">Beat 0{storyline.beatIndex + 1}</span>
+                    <span className="hd-tag">{storyline.endingPattern}</span>
+                  </div>
+                  <h3 className="text-lg font-semibold leading-tight text-[#fff7dc]">{storyline.title}</h3>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#b6c2a0]">{storyline.agiPrepSkill}</p>
+                  <p className="text-sm leading-6 text-[#d8c8a8]/80">{storyline.setup}</p>
+                  <p className="border-l-2 border-[#d6d59a] pl-3 text-sm italic leading-6 text-[#f2e4c9]">
+                    {storyline.hardChoice}
+                  </p>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-12 flex flex-col items-start gap-4 border border-white/10 bg-black/40 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+              <div>
+                <h3 className="text-2xl font-semibold text-[#fff7dc]">The timeline is already written.</h3>
+                <p className="mt-1 text-[#d8c8a8]/80">Your character is not. Begin in the rented room, 2025.</p>
+              </div>
+              <button
+                className="pixel-button"
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  void startLife();
+                }}
+                disabled={loading}
+              >
+                <Monitor size={17} aria-hidden="true" />
+                {loading ? "Rolling life" : "Start life"}
+              </button>
+            </div>
+          </div>
+        </section>
+        </>
+      ) : (
+        <section className="vn-layout relative z-10 mx-auto grid min-h-[calc(100svh-68px)] w-full max-w-[1500px] gap-3 px-3 pb-3 pt-2 sm:px-5 lg:grid-cols-[210px_minmax(0,1fr)_255px]">
+          <aside className="vn-side-panel order-3 lg:order-1">
+            {life ? (
+              <>
+                <div className="vn-panel-label">Subject</div>
+                <div className="mt-3 flex items-center gap-3">
+                  <Image
+                    src={life.character.avatar}
+                    alt=""
+                    width={74}
+                    height={92}
+                    className="h-24 w-16 border border-[#2f3a36] bg-[#111815] object-contain object-bottom"
+                  />
+                  <div className="min-w-0">
+                    <h2 className="truncate text-lg font-semibold text-[#e9f3d1]">{life.character.name}</h2>
+                    <p className="mt-1 text-xs leading-5 text-[#b6c2a0]">
+                      {life.character.age}, {life.character.city}
+                    </p>
+                    <p className="text-xs leading-5 text-[#b6c2a0]">{life.character.job}</p>
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3 border-t border-[#31423a] pt-4">
                   {Object.entries(life.state).map(([key, value]) => (
-                    <div key={key} className="mb-3 last:mb-0">
-                      <div className="mb-1 flex justify-between text-sm text-white/70">
-                        <span className="capitalize">{key}</span>
+                    <div key={key}>
+                      <div className="mb-1 flex items-center justify-between font-mono text-[0.65rem] uppercase tracking-[0.12em] text-[#b6c2a0]">
+                        <span>{key}</span>
                         <span>{statLabel(value)}</span>
                       </div>
-                      <div className="h-2 overflow-hidden rounded bg-white/10">
-                        <div className="h-full bg-white/70" style={{ width: `${value}%` }} />
+                      <div className="h-2 border border-[#29362f] bg-[#111815]">
+                        <div className="h-full bg-[#9fc8a0]" style={{ width: `${value}%` }} />
                       </div>
                     </div>
                   ))}
                 </div>
+              </>
+            ) : null}
+
+            <div className="mt-5 border-t border-[#31423a] pt-4">
+              <div className="vn-panel-label">Scenes</div>
+              <div className="mt-3 grid gap-2">
+                {scenes.map((scene) => (
+                  <div key={scene.id} className={`scene-chip ${scene.id === activeScene.id ? "scene-chip-active" : ""}`}>
+                    <span className="scene-chip-image">
+                      <Image src={scene.asset} alt="" width={64} height={36} className="h-full w-full object-cover" />
+                    </span>
+                    <span>{scene.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          <section className="vn-console order-1 lg:order-2">
+            <div className="vn-console-bar">
+              <span>
+                {beat.year} / {beat.title}
+              </span>
+              <span>
+                beat {visibleBeatIndex + 1}:{timeline.length}
+              </span>
+            </div>
+
+            <div className="vn-viewport">
+              <Image
+                src={activeScene.asset}
+                alt={activeScene.name}
+                fill
+                priority
+                sizes="(min-width: 1024px) 1000px, 100vw"
+                className="object-cover"
+                style={{ objectPosition: activeScene.position }}
+              />
+              {life ? (
+                <Image
+                  src={life.character.avatar}
+                  alt=""
+                  width={360}
+                  height={450}
+                  priority
+                  className="vn-character-sprite"
+                />
               ) : null}
-            </aside>
+              <div className="vn-viewport-shade" aria-hidden="true" />
+            </div>
 
-            <section className="rounded border border-white/10 bg-black/28 p-4 sm:p-6">
-              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-white/45">
-                    {beat.year} / {beat.title}
-                  </p>
-                  <h2 className="mt-1 text-2xl font-semibold text-white">{event?.title ?? "Awaiting narrator"}</h2>
-                </div>
-                <div className="h-2 w-32 overflow-hidden rounded bg-white/10">
-                  <div className="h-full bg-white/70" style={{ width: `${progress}%` }} />
-                </div>
+            <div className="vn-dialogue-box">
+              <div className="vn-speaker-row">
+                <span>{life?.character.name ?? "Narrator"}</span>
+                <span className="font-mono text-[0.64rem] uppercase tracking-[0.16em] text-[#9fb19b]">{activeScene.name}</span>
               </div>
+              <p>
+                {displayedNarration || "The monitor warms. Somewhere past the window, the next year is already compiling."}
+                {loading ? <span className="ml-1 animate-pulse text-[#e9f3d1]">_</span> : null}
+              </p>
+            </div>
+          </section>
 
-              <div className="min-h-[220px] whitespace-pre-wrap text-lg leading-8 text-white/78">
-                {displayedNarration || "The life is being assembled from small facts and bad timing."}
-                {loading ? <span className="animate-pulse">_</span> : null}
-              </div>
-
-              {event && !loading && event.kind === "event" ? (
-                <div className="mt-6 grid gap-3">
-                  {event.choices.map((choice) => (
-                    <button
-                      key={choice.id}
-                      onClick={() => choose(choice.id)}
-                      className="rounded border border-white/10 bg-white/[0.06] p-4 text-left transition hover:border-white/25 hover:bg-white/[0.1]"
-                    >
-                      <span className="block text-base font-semibold text-white">{choice.label}</span>
-                      <span className="mt-1 block text-sm leading-6 text-white/58">{choice.detail}</span>
+          <aside className="vn-menu-panel order-2 lg:order-3">
+            <div>
+              <div className="vn-panel-label">Action</div>
+              <div className="mt-3 grid gap-3">
+                {event && !loading && event.kind === "event" ? (
+                  event.choices.map((choice, index) => (
+                    <button key={choice.id} onClick={() => choose(choice.id)} className="vn-choice-button">
+                      <span className="font-mono text-[0.68rem]">{String(index + 1).padStart(2, "0")}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-lg font-semibold">{choice.label}</span>
+                        <span className="mt-1 block text-xs leading-5 text-[#b6c2a0]">{choice.detail}</span>
+                      </span>
                     </button>
-                  ))}
-                </div>
-              ) : null}
-
-              {phase === "summary" && event ? (
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <button
-                    className="inline-flex h-10 items-center gap-2 rounded border border-white/15 bg-white px-3 text-sm font-medium text-black transition hover:bg-white/85"
-                    onClick={replay}
-                  >
-                    <RotateCcw size={16} />
-                    Replay
+                  ))
+                ) : phase === "summary" && event ? (
+                  <button className="vn-choice-button" onClick={replay}>
+                    <RotateCcw size={16} aria-hidden="true" />
+                    <span className="text-lg font-semibold">Replay</span>
                   </button>
-                </div>
-              ) : null}
+                ) : (
+                  <button className="vn-choice-button" disabled>
+                    <span className="font-mono text-[0.68rem]">00</span>
+                    <span className="text-lg font-semibold">{loading ? "Wait" : "Listen"}</span>
+                  </button>
+                )}
+              </div>
+            </div>
 
-              {event ? (
-                <div className="mt-5 flex items-center gap-2 border-t border-white/10 pt-4">
+            <div className="mt-5 border-t border-[#31423a] pt-4">
+              <div className="vn-panel-label">Lens</div>
+              <div className="mt-3 flex items-center gap-3">
+                <Image
+                  src={lens.asset}
+                  alt=""
+                  width={42}
+                  height={42}
+                  className="h-11 w-11 shrink-0 border border-[#31423a] bg-[#111815] object-contain"
+                />
+                <div className="min-w-0">
+                  <h2 className="truncate text-base font-semibold text-[#e9f3d1]">{lens.name}</h2>
+                  <p className="text-xs leading-5 text-[#b6c2a0]">{lensPreviewCopy[lens.id]}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 border-t border-[#31423a] pt-4">
+              <div className="mb-2 flex items-center justify-between font-mono text-[0.64rem] uppercase tracking-[0.15em] text-[#b6c2a0]">
+                <span>Progress</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="h-2 border border-[#29362f] bg-[#111815]">
+                <div className="h-full bg-[#d6d59a]" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+
+            {event ? (
+              <div className="mt-5 border-t border-[#31423a] pt-4">
+                <div className="vn-panel-label">Signal</div>
+                <div className="mt-3 flex items-center gap-2">
                   <button
                     title="This event worked"
                     onClick={() => sendFeedback("up")}
-                    className={`grid h-9 w-9 place-items-center rounded border ${
-                      event.feedback === "up" ? "border-white/60 bg-white/18" : "border-white/10 bg-white/[0.04]"
-                    }`}
+                    className={`feedback-button ${event.feedback === "up" ? "feedback-button-active" : ""}`}
                   >
-                    <ThumbsUp size={16} />
+                    <ThumbsUp size={15} aria-hidden="true" />
                   </button>
                   <button
                     title="This event missed"
                     onClick={() => sendFeedback("down")}
-                    className={`grid h-9 w-9 place-items-center rounded border ${
-                      event.feedback === "down" ? "border-white/60 bg-white/18" : "border-white/10 bg-white/[0.04]"
-                    }`}
+                    className={`feedback-button ${event.feedback === "down" ? "feedback-button-active" : ""}`}
                   >
-                    <ThumbsDown size={16} />
+                    <ThumbsDown size={15} aria-hidden="true" />
                   </button>
                 </div>
-              ) : null}
-            </section>
-
-            <aside className="space-y-4">
-              <div className="rounded border border-white/10 bg-black/24 p-4">
-                <Image src={lens.asset} alt="" width={260} height={160} className="mb-4 w-full rounded" />
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-white/45">lens</p>
-                <h2 className="mt-1 text-xl font-semibold text-white">{lens.name}</h2>
-                <p className="mt-2 text-sm leading-6 text-white/60">{lens.tagline}</p>
               </div>
-
-              <div className="rounded border border-white/10 bg-black/24 p-4">
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-white/45">world spine</p>
-                <div className="mt-3 space-y-3">
-                  {timeline.map((item, index) => (
-                    <div key={item.id} className="grid grid-cols-[36px_1fr] gap-3">
-                      <Image src={item.asset} alt="" width={36} height={36} className="rounded border border-white/10" />
-                      <div>
-                        <p className={index <= (life?.beatIndex ?? 0) ? "text-sm text-white" : "text-sm text-white/38"}>
-                          {item.year}: {item.title}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </aside>
-          </div>
-        )}
-      </section>
+            ) : null}
+          </aside>
+        </section>
+      )}
     </main>
   );
 }

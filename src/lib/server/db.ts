@@ -6,6 +6,7 @@ import { getLens } from "@/lib/game/lenses";
 import { timeline } from "@/lib/game/timeline";
 import type {
   Character,
+  CharacterId,
   CharacterState,
   ChoiceHistoryItem,
   LensId,
@@ -114,13 +115,12 @@ function parseEvent(row: EventRow): StoredEvent {
   };
 }
 
-export function createLife(lens: LensId, characterOverride?: Partial<Character>) {
+export function createLife(lens: LensId, characterOverride?: Partial<Character>, characterId?: CharacterId) {
   const lifeId = crypto.randomUUID();
-  const character = {
-    ...rollCharacter(),
-    ...characterOverride,
-    avatar: characterOverride?.avatar ?? "/assets/avatars/avatar-01.svg"
-  };
+  const base = rollCharacter(characterId);
+  const character = characterOverride
+    ? { ...base, ...characterOverride, avatar: characterOverride.avatar ?? base.avatar }
+    : base;
 
   getDb()
     .prepare(
